@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Island Key — Website Architecture & Design Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,300;1,9..144,200&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --navy:#1B2D4F;--teal:#1A8A7D;--terra:#D4854A;--cream:#FDFCFA;
+  --gold:#C4A55A;--ink:#0a0a0a;--mist:#f4f2ef;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--mist);color:var(--ink);line-height:1.6;}
+/* Cover */
+.cover{background:var(--ink);color:var(--cream);padding:80px 64px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;}
+.cover-label{font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(253,252,250,0.4);font-weight:300;margin-bottom:3rem;}
+.cover h1{font-family:'Fraunces',serif;font-weight:200;font-size:4.5rem;line-height:1.05;letter-spacing:-0.01em;max-width:700px;}
+.cover h1 em{font-style:italic;color:var(--gold);}
+.cover-meta{display:flex;gap:3rem;font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(253,252,250,0.35);font-weight:300;}
+/* Section layout */
+.section{padding:64px;border-bottom:1px solid rgba(10,10,10,0.1);max-width:1100px;margin:0 auto;}
+.section+.section{margin-top:0;}
+.section-num{font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--teal);font-weight:400;margin-bottom:0.5rem;}
+.section h2{font-family:'Fraunces',serif;font-weight:300;font-size:2.2rem;line-height:1.1;margin-bottom:2rem;letter-spacing:-0.01em;}
+.section h3{font-size:0.7rem;letter-spacing:0.25em;text-transform:uppercase;font-weight:500;color:var(--navy);margin:2rem 0 0.8rem;}
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;}
+/* Cards */
+.card{background:#fff;border:1px solid rgba(10,10,10,0.08);padding:1.5rem;}
+.card-label{font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--gold);font-weight:400;margin-bottom:0.5rem;}
+.card h4{font-family:'Fraunces',serif;font-weight:300;font-size:1.2rem;margin-bottom:0.6rem;}
+.card p,.card li{font-size:0.82rem;color:#444;line-height:1.7;font-weight:300;}
+.card ul{padding-left:1rem;}
+.card li{margin-bottom:0.3rem;}
+/* Wireframe block */
+.wireframe{background:#fff;border:1px solid rgba(10,10,10,0.1);margin:1.5rem 0;}
+.wf-section{border-bottom:1px solid rgba(10,10,10,0.08);padding:1.2rem 1.5rem;display:flex;align-items:flex-start;gap:1.5rem;}
+.wf-section:last-child{border-bottom:none;}
+.wf-num{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(10,10,10,0.3);min-width:32px;padding-top:3px;}
+.wf-body{}
+.wf-name{font-weight:500;font-size:0.85rem;margin-bottom:0.3rem;}
+.wf-desc{font-size:0.78rem;color:#555;font-weight:300;line-height:1.6;}
+.wf-copy{font-size:0.75rem;color:var(--teal);font-style:italic;margin-top:0.4rem;}
+.wf-spec{font-size:0.7rem;color:#888;margin-top:0.3rem;font-family:monospace;}
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:0;}
+.step{display:grid;grid-template-columns:48px 1fr;gap:1rem;padding:1.2rem 0;border-bottom:1px solid rgba(10,10,10,0.08);}
+.step:last-child{border-bottom:none;}
+.step-num{font-family:'Fraunces',serif;font-weight:200;font-size:1.8rem;color:rgba(10,10,10,0.15);line-height:1;}
+.step-body{}
+.step-title{font-weight:500;font-size:0.85rem;margin-bottom:0.3rem;}
+.step-desc{font-size:0.78rem;color:#555;font-weight:300;line-height:1.6;}
+/* Questionnaire */
+.q-group{background:#fff;border:1px solid rgba(10,10,10,0.08);margin-bottom:1rem;}
+.q-group-header{padding:1rem 1.5rem;background:var(--navy);color:var(--cream);display:flex;align-items:center;gap:1rem;}
+.q-group-num{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;opacity:0.5;}
+.q-group-title{font-weight:400;font-size:0.9rem;}
+.q-list{padding:0.8rem 1.5rem;}
+.q-item{padding:0.7rem 0;border-bottom:1px solid rgba(10,10,10,0.06);display:grid;grid-template-columns:24px 1fr auto;gap:0.8rem;align-items:start;}
+.q-item:last-child{border-bottom:none;}
+.q-label{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);padding-top:3px;}
+.q-text{font-size:0.82rem;font-weight:300;line-height:1.5;}
+.q-type{font-size:0.65rem;color:#999;font-family:monospace;padding-top:3px;white-space:nowrap;}
+/* Color/Motion palette */
+.palette{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0;}
+.swatch{display:flex;align-items:center;gap:0.6rem;}
+.swatch-dot{width:24px;height:24px;border-radius:50%;border:1px solid rgba(10,10,10,0.1);}
+.swatch-label{font-size:0.72rem;font-weight:300;}
+/* Motion table */
+table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+thead th{background:var(--ink);color:var(--cream);padding:0.7rem 1rem;text-align:left;font-weight:400;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;}
+tbody td{padding:0.75rem 1rem;border-bottom:1px solid rgba(10,10,10,0.07);font-weight:300;vertical-align:top;}
+tbody tr:nth-child(even){background:rgba(10,10,10,0.02);}
+/* Conversion */
+.funnel{display:flex;flex-direction:column;gap:0.5rem;margin:1rem 0;}
+.funnel-stage{background:#fff;border:1px solid rgba(10,10,10,0.08);padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+.funnel-arrow{text-align:center;color:rgba(10,10,10,0.2);font-size:1.2rem;}
+.funnel-label{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);min-width:80px;}
+.funnel-text{font-size:0.82rem;font-weight:300;}
+/* Quote/principle */
+.principle{border-left:2px solid var(--gold);padding:0.8rem 1.5rem;margin:1.5rem 0;background:#fff;}
+.principle p{font-family:'Fraunces',serif;font-weight:300;font-style:italic;font-size:1.05rem;color:var(--navy);}
+/* Tag */
+.tag{display:inline-block;padding:0.2rem 0.6rem;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:400;border:1px solid rgba(10,10,10,0.15);margin:0.2rem 0.2rem 0 0;}
+.tag.gold{border-color:var(--gold);color:var(--gold);}
+.tag.teal{border-color:var(--teal);color:var(--teal);}
+.tag.navy{border-color:var(--navy);color:var(--navy);}
+/* Page break helper */
+hr{border:none;border-top:2px solid var(--ink);margin:64px 0;}
+.intro-text{font-size:1rem;font-weight:300;line-height:1.8;color:#444;max-width:640px;margin-bottom:2rem;}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-label">Island Key · Website Architecture · Design Brief v1 · June 2026</div>
+  <div>
+    <h1>A website that<br/>feels like <em>access.</em></h1>
+  </div>
+  <div class="cover-meta">
+    <span>10 Deliverables</span>
+    <span>3 Routes</span>
+    <span>2 Partner Journeys</span>
+    <span>Prepared: Locus Design + Innovation</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">01</div>
+  <h2>Website Architecture</h2>
+  <p class="intro-text">Three routes. One coherent experience. The homepage creates desire. The partner routes qualify and convert. Everything else is noise.</p>
+
+  <h3>Route Map</h3>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-label">Route /</div>
+      <h4>Homepage</h4>
+      <p>The cinematic entry point. Establishes atmosphere, communicates the vision, and funnels visitors to the two partner paths. No product features. No pricing. Just the world of Island Key.</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Route /hosts</div>
+      <h4>Host Journey</h4>
+      <p>Landing page + multi-step application flow. Tone: respectful, professional, aspirational. The host should feel chosen — not sold to. Ends with a qualified application.</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Route /operators</div>
+      <h4>Operator Journey</h4>
+      <p>Landing page + multi-step application flow. Tone: collegial, direct, peer-to-peer. The operator should feel like they're joining a network of trusted professionals. Ends with a qualified application.</p>
+    </div>
+  </div>
+
+  <h3>Shared Infrastructure</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Navigation</div>
+      <h4>Minimal persistent nav</h4>
+      <ul>
+        <li>Logo (top-left) — links to homepage</li>
+        <li>Two ghost links (top-right): "For Hosts" · "For Operators"</li>
+        <li>Nav fades in after hero scroll — invisible on landing</li>
+        <li>On mobile: nav hidden entirely, accessed via hamburger if needed</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Footer</div>
+      <h4>Minimal footer</h4>
+      <ul>
+        <li>Wordmark (left)</li>
+        <li>Email: bookings@islandkey.gr</li>
+        <li>Instagram (when live)</li>
+        <li>© 2026 Island Key · Chania, Crete</li>
+        <li>No sitemap, no cookie banner (handled separately)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Page Weights</h3>
+  <div class="card">
+    <p>Homepage: 6–8 sections · ~3 full-screen moments · target load &lt;3s on 4G<br/>
+    Host/Operator pages: 2 sections + multi-step form · lightweight JS<br/>
+    No blog, no news, no FAQ at this stage — all deferred to post-pilot<br/>
+    <em>Guest access (/guests) deferred — confirmed out of scope.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">02</div>
+  <h2>Homepage Structure</h2>
+  <p class="intro-text">Eight sections. Designed as a single cinematic scroll. The visitor should feel the island before they understand the product. Restraint over explanation at every step.</p>
+
+  <div class="wireframe">
+
+    <div class="wf-section">
+      <div class="wf-num">S1</div>
+      <div class="wf-body">
+        <div class="wf-name">HERO — Full viewport video</div>
+        <div class="wf-desc">Full-screen looping video reel. Black letterbox bars optional (cinematic ratio 2.35:1). Wordmark centred in the lower third — not over the action. Single scroll-down indicator. No CTA button at this stage. The video IS the CTA.</div>
+        <div class="wf-copy">"Island Key" — Fraunces 200 · "Your island unlocked." — small, high tracking, uppercase</div>
+        <div class="wf-spec">height: 100vh · video: autoplay, muted, loop · overlay: rgba(0,0,0,0.25)</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S2</div>
+      <div class="wf-body">
+        <div class="wf-name">STATEMENT — One line</div>
+        <div class="wf-desc">Full-width dark section. One editorial statement, large. No subtext. The kind of line that makes someone stop scrolling. Slow fade-in on scroll entry.</div>
+        <div class="wf-copy">"Crete has places most guests never find. Island Key changes that."</div>
+        <div class="wf-spec">background: near-black (#0e0e0e) · font-size: clamp(2rem, 5vw, 4rem) · Fraunces italic 200</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S3</div>
+      <div class="wf-body">
+        <div class="wf-name">ATMOSPHERE — Editorial image grid</div>
+        <div class="wf-desc">3–4 large editorial images. No text over images. Full-bleed, asymmetric layout. One image per "feeling": hidden cove / private terrace / boat at dusk / local market. Purpose: visceral connection. No captions.</div>
+        <div class="wf-spec">CSS grid — asymmetric columns · images at natural aspect ratios · lazy-loaded · parallax on scroll</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S4</div>
+      <div class="wf-body">
+        <div class="wf-name">THE CONCEPT — Minimal explanation</div>
+        <div class="wf-desc">One column of text (left-aligned, generous margin). Max 4 lines. Explains what Island Key does in plain language — but in the brand voice. Right side: nothing. Or an abstract atmospheric detail image. This is where the product becomes legible without becoming a features list.</div>
+        <div class="wf-copy">"Island Key is a concierge platform built into the places you stay. Your host sets it up. You unlock it when you arrive. From there — the island is yours."</div>
+        <div class="wf-spec">max-width: 560px · font-size: 1.1rem · Plus Jakarta Sans 300 · line-height: 1.9</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S5</div>
+      <div class="wf-body">
+        <div class="wf-name">FOR HOSTS — Partner invitation</div>
+        <div class="wf-desc">Full-width dark panel. Left: "For Properties" eyebrow + large headline + 2 lines of copy + CTA arrow link. Right: atmospheric interior/property image bleeding to edge. The host should feel like they are being invited — not recruited.</div>
+        <div class="wf-copy">Headline: "Your property, elevated." · Sub: "Island Key becomes the concierge layer your guests remember." · CTA: "Apply to host →"</div>
+        <div class="wf-spec">grid: 50/50 split on desktop · stacked on mobile · background: var(--navy)</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S6</div>
+      <div class="wf-body">
+        <div class="wf-name">FOR OPERATORS — Partner invitation</div>
+        <div class="wf-desc">Inverse treatment to S5. Light background. Right: "For Operators" eyebrow + headline + copy + CTA. Left: outdoor experience image (boat, hike, chef). The operator should feel peer-to-peer — Island Key respects their craft.</div>
+        <div class="wf-copy">Headline: "Your craft. Our guests." · Sub: "Join a curated network of Cretan experiences. No noise — just the right bookings." · CTA: "Join the network →"</div>
+        <div class="wf-spec">grid: 50/50 · background: var(--cream) · text: var(--navy)</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S7</div>
+      <div class="wf-body">
+        <div class="wf-name">SIGNAL — Credibility moment</div>
+        <div class="wf-desc">Restrained. One or two data points or statements that establish legitimacy without overselling. Could be a launch region statement, a number, a founding principle. No logos yet (none confirmed). No testimonials yet. Just a signal of seriousness.</div>
+        <div class="wf-copy">Options: "Launching Chania, summer 2026." / "A closed network of verified properties and local experts." / "Curated. Invited. Exclusive."</div>
+        <div class="wf-spec">Centred · minimal · could use a horizontal rule + serif pull quote treatment</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="wf-num">S8</div>
+      <div class="wf-body">
+        <div class="wf-name">FOOTER — Anchor</div>
+        <div class="wf-desc">Minimal. Wordmark, contact, social. No content. No links list. The page should end quietly — not with a sales pitch. Let the atmosphere carry.</div>
+        <div class="wf-spec">Dark background · padding: 48px 64px · flex row · bookings@islandkey.gr</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">03</div>
+  <h2>Section-by-Section Content Direction</h2>
+  <p class="intro-text">Every line of copy earns its place. The voice is confident, economical, and specific. It never explains too much. It trusts the visitor to connect the dots.</p>
+
+  <div class="principle"><p>"Write as if you don't need to convince anyone. The right partners will recognise it immediately."</p></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Voice Rules</div>
+      <h4>What Island Key sounds like</h4>
+      <ul>
+        <li>Short sentences. Full stops. Confidence.</li>
+        <li>Never explain what could be shown.</li>
+        <li>Avoid: "platform", "solution", "seamless", "curated" (overused)</li>
+        <li>Use: "access", "trusted", "local", "yours", "the island"</li>
+        <li>"Mediterranean" — never "Aegean"</li>
+        <li>Provider names never mentioned. Ever.</li>
+        <li>Copy for hosts ≠ copy for operators. Different register.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Hierarchy</div>
+      <h4>Copy levels per section</h4>
+      <ul>
+        <li>EYEBROW — 3–5 words, uppercase, 0.6rem, gold</li>
+        <li>HEADLINE — 4–8 words max. Fraunces. Statement not question.</li>
+        <li>BODY — 2–3 sentences absolute maximum per section</li>
+        <li>CTA — verb + noun. "Apply to host →" not "Learn more"</li>
+        <li>NEVER use "click here", "get started", "find out more"</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Section Copy Library</h3>
+  <div class="card">
+    <table>
+      <thead><tr><th>Section</th><th>Eyebrow</th><th>Headline</th><th>Body</th><th>CTA</th></tr></thead>
+      <tbody>
+        <tr><td>S1 Hero</td><td>—</td><td>Island Key</td><td>Your island unlocked.</td><td>↓ scroll</td></tr>
+        <tr><td>S2 Statement</td><td>—</td><td>Crete has places most guests never find. Island Key changes that.</td><td>—</td><td>—</td></tr>
+        <tr><td>S4 Concept</td><td>The platform</td><td>Built for where you stay.</td><td>Island Key connects guests to the island through the properties they trust. Your host sets it up. You arrive and it's already yours.</td><td>—</td></tr>
+        <tr><td>S5 Hosts</td><td>For Properties</td><td>Your property, elevated.</td><td>Island Key becomes the concierge layer your guests remember. Set up once. Run quietly.</td><td>Apply to host →</td></tr>
+        <tr><td>S6 Operators</td><td>For Operators</td><td>Your craft. Our guests.</td><td>Join a network of trusted local experts. We bring the guests. You deliver the experience.</td><td>Join the network →</td></tr>
+        <tr><td>S7 Signal</td><td>Now open</td><td>Launching Chania, summer 2026.</td><td>A closed network of verified properties and local operators. Applications reviewed individually.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">04</div>
+  <h2>Host Portal Structure</h2>
+  <p class="intro-text">Two phases: a landing moment that qualifies intent, then a multi-step application that feels effortless. The host should never feel they are filling out a form — they should feel they are being considered.</p>
+
+  <h3>Landing Page (/hosts)</h3>
+  <div class="wireframe">
+    <div class="wf-section">
+      <div class="wf-num">H1</div>
+      <div class="wf-body">
+        <div class="wf-name">HOST HERO</div>
+        <div class="wf-desc">Full-height. Split: large property/interior image (right) + text (left). Dark background. Eyebrow: "For Properties". Headline: "Turn your property into an experience." Subtext: 2 lines. Single CTA button: "Start your application".</div>
+        <div class="wf-copy">"Your guests already chose your property. Island Key makes sure they choose nothing else for the rest of their stay."</div>
+      </div>
+    </div>
+    <div class="wf-section">
+      <div class="wf-num">H2</div>
+      <div class="wf-body">
+        <div class="wf-name">HOW IT WORKS (for hosts)</div>
+        <div class="wf-desc">3 steps. Horizontal on desktop, vertical on mobile. Step 1: You apply. Step 2: We set you up. Step 3: Your guests get access. Clean numbered list, no icons, generous spacing.</div>
+        <div class="wf-copy">1. "Apply and we'll review your property within 48 hours." 2. "We set up your Island Key access — no tech required." 3. "Guests scan in, island unlocks."</div>
+      </div>
+    </div>
+    <div class="wf-section">
+      <div class="wf-num">H3</div>
+      <div class="wf-body">
+        <div class="wf-name">APPLICATION ENTRY</div>
+        <div class="wf-desc">Clean transition into the form. Single line above the first form step: "Tell us about your property." Then the multi-step questionnaire begins.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Application Flow</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Property Overview</div><div class="step-desc">3 fields. Property name, type (select), and location. Fast. Establishes basic qualification.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Scale & Operation</div><div class="step-desc">3 fields. Number of units, average monthly guests, current season (select months).</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Current Guest Experience</div><div class="step-desc">2–3 open/select fields. How guests currently access local experiences. What's missing from their stay.</div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">Your Vision</div><div class="step-desc">1 open text field. "What would you most like Island Key to do for your guests?" — Intentionally open. Surfaces partnership maturity and aspiration.</div></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">Contact</div><div class="step-desc">Name, email, WhatsApp. Optional: Instagram / website. Submit triggers Resend email + WhatsApp notification.</div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">05</div>
+  <h2>Host Onboarding Questionnaire</h2>
+  <p class="intro-text">12 questions across 5 steps. Progress indicator always visible. Each step: max 3 fields. Auto-advance where possible. Submit button only on Step 5.</p>
+
+  <!-- Step 1 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 01 / 05</div><div class="q-group-title">Your Property</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q1</div><div class="q-text">What is the name of your property?<br/><small style="color:#888">Villa / hotel name, or your own name if you manage multiple</small></div><div class="q-type">text input</div></div>
+      <div class="q-item"><div class="q-label">Q2</div><div class="q-text">What type of property do you manage?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">Private Villa · Boutique Hotel · Apartment / Studio · Holiday Home · Multiple Properties · Other</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q3</div><div class="q-text">Where is your property located?<br/><small style="color:#888">Village, area or address — e.g. "Old Town Chania", "Apokoronas"</small></div><div class="q-type">text input</div></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 02 / 05</div><div class="q-group-title">Scale of Operation</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q4</div><div class="q-text">How many bookable units or rooms do you have?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">1 · 2–4 · 5–10 · 11–20 · 20+</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q5</div><div class="q-text">Approximately how many guest stays do you host per month during peak season?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">Under 10 · 10–25 · 25–50 · 50–100 · 100+</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q6</div><div class="q-text">Which months do you operate? (Select all that apply)</div><div class="q-type">multi-select</div></div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 03 / 05</div><div class="q-group-title">Current Guest Experience</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q7</div><div class="q-text">How do your guests currently discover and book local activities and experiences?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">We recommend via WhatsApp / email · We have a printed welcome guide · They find things on their own · We have no current system · Other</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q8</div><div class="q-text">What do guests ask for most that you find difficult to arrange?<br/><small style="color:#888">e.g. transfers, activities, private dining, rentals</small></div><div class="q-type">text input</div></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 04 / 05</div><div class="q-group-title">Your Vision</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q9</div><div class="q-text">How important is the guest experience beyond the property itself to your hosting philosophy?</div><div class="q-type">scale 1–5</div></div>
+      <div class="q-item"><div class="q-label">Q10</div><div class="q-text">In your own words: what would you most like Island Key to do for your guests?<br/><small style="color:#888">There's no right answer. We want to understand your vision.</small></div><div class="q-type">long text</div></div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 05 / 05</div><div class="q-group-title">Your Contact</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q11</div><div class="q-text">Your name</div><div class="q-type">text input</div></div>
+      <div class="q-item"><div class="q-label">Q12</div><div class="q-text">Email address</div><div class="q-type">email</div></div>
+      <div class="q-item"><div class="q-label">Q13</div><div class="q-text">WhatsApp number<br/><small style="color:#888">We'll reach out here first. Include country code: +30...</small></div><div class="q-type">tel</div></div>
+      <div class="q-item"><div class="q-label">Q14</div><div class="q-text">Website or Instagram (optional)<br/><small style="color:#888">Helps us understand your property style</small></div><div class="q-type">url · optional</div></div>
+    </div>
+  </div>
+
+  <div class="principle"><p>"Thank you. We review every application individually and will be in touch within 48 hours."</p></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">06</div>
+  <h2>Operator Portal Structure</h2>
+  <p class="intro-text">Operators are professionals. They don't need to be sold to — they need to understand why this partnership is worth their time. The tone is peer-to-peer. Direct. Respectful of their expertise.</p>
+
+  <h3>Landing Page (/operators)</h3>
+  <div class="wireframe">
+    <div class="wf-section">
+      <div class="wf-num">O1</div>
+      <div class="wf-body">
+        <div class="wf-name">OPERATOR HERO</div>
+        <div class="wf-desc">Full-height. Outdoor/experience image (boat deck, hiking trail, chef at work — no specific brand identifiable). Eyebrow: "For Operators". Headline: "Your craft. Our guests." Subtext: 2 lines. CTA: "Apply to join".</div>
+        <div class="wf-copy">"Island Key connects local experts with guests staying at partner properties across Crete. No middleman. No platform fee on enquiries. Just the right guests finding you."</div>
+      </div>
+    </div>
+    <div class="wf-section">
+      <div class="wf-num">O2</div>
+      <div class="wf-body">
+        <div class="wf-name">WHO JOINS</div>
+        <div class="wf-desc">Minimal category list. Not a features section — just signals of who belongs. Boat operators. Private chefs. Hiking guides. Transfers. Rentals. Wellness. Restaurants. Photography. Presented as elegant tags or a restrained horizontal list.</div>
+      </div>
+    </div>
+    <div class="wf-section">
+      <div class="wf-num">O3</div>
+      <div class="wf-body">
+        <div class="wf-name">THE ARRANGEMENT</div>
+        <div class="wf-desc">3 short statements about how the partnership works. Commission-only. Direct enquiries via WhatsApp. No subscription or upfront cost. Written as facts, not benefits. Operators recognise good terms immediately.</div>
+        <div class="wf-copy">"Commission on completed bookings only. No subscription fee. Enquiries come directly to your WhatsApp."</div>
+      </div>
+    </div>
+    <div class="wf-section">
+      <div class="wf-num">O4</div>
+      <div class="wf-body">
+        <div class="wf-name">APPLICATION ENTRY</div>
+        <div class="wf-desc">Single line: "Tell us about your operation." Transition directly into multi-step form.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Application Flow</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">What You Do</div><div class="step-desc">Category (select), business name, brief description of what you offer. Fast.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Where You Operate</div><div class="step-desc">Location(s) on Crete, area of operation, any coverage limitations.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Your Capacity</div><div class="step-desc">How many bookings can you take per week/month, minimum group size, lead time needed.</div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">Your Online Presence</div><div class="step-desc">Website, Instagram, Google rating (optional). Helps us understand market positioning.</div></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">Contact</div><div class="step-desc">Name, email, WhatsApp. Submit triggers notification to Spyros.</div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">07</div>
+  <h2>Operator Onboarding Questionnaire</h2>
+  <p class="intro-text">13 questions, 5 steps. Tone is direct. No jargon. Questions are asked the way Spyros would ask them in person — conversationally, with genuine professional curiosity.</p>
+
+  <!-- Step 1 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 01 / 05</div><div class="q-group-title">What You Do</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q1</div><div class="q-text">What category best describes your service?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">Boat Tours & Water · Hiking & Land Activities · Private Transfers · Car / Bike / ATV Rentals · Private Chef · Restaurant · Wellness & Spa · Beach Services · Photography · Other</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q2</div><div class="q-text">Name of your business or operation</div><div class="q-type">text input</div></div>
+      <div class="q-item"><div class="q-label">Q3</div><div class="q-text">In one or two sentences, what do you offer?<br/><small style="color:#888">Describe it the way you'd tell a guest. Not marketing language — just what you do.</small></div><div class="q-type">text area</div></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 02 / 05</div><div class="q-group-title">Where You Operate</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q4</div><div class="q-text">Where on Crete do you operate?<br/><small style="color:#888">e.g. "Chania area", "Across western Crete", "Souda Bay"</small></div><div class="q-type">text input</div></div>
+      <div class="q-item"><div class="q-label">Q5</div><div class="q-text">Are there areas you don't cover or won't travel to?</div><div class="q-type">text input · optional</div></div>
+      <div class="q-item"><div class="q-label">Q6</div><div class="q-text">Which months do you operate? (Select all that apply)</div><div class="q-type">multi-select</div></div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 03 / 05</div><div class="q-group-title">Capacity & Bookings</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q7</div><div class="q-text">How many bookings can you typically handle per week during peak season?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">1–3 · 4–10 · 10–20 · 20+ · Unlimited / flexible</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q8</div><div class="q-text">What is your typical minimum group size (if any)?</div><div class="q-type">number · optional</div></div>
+      <div class="q-item"><div class="q-label">Q9</div><div class="q-text">How much advance notice do you typically need for a booking?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">Same day · 24 hours · 2–3 days · 1 week+ · Depends on the request</div><div class="q-type">—</div></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 04 / 05</div><div class="q-group-title">Business Maturity</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q10</div><div class="q-text">How long have you been operating this service?</div><div class="q-type">single select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">Less than 1 year · 1–3 years · 3–7 years · 7+ years</div><div class="q-type">—</div></div>
+      <div class="q-item"><div class="q-label">Q11</div><div class="q-text">Do you have a website, Instagram, or Google Business listing?<br/><small style="color:#888">Share the link(s) if you'd like — optional but helpful</small></div><div class="q-type">url · optional</div></div>
+      <div class="q-item"><div class="q-label">Q12</div><div class="q-text">How are you currently receiving bookings?</div><div class="q-type">multi-select</div></div>
+      <div class="q-item"><div class="q-label">—</div><div class="q-text" style="font-size:0.75rem;color:#888;padding-left:0.5rem;">WhatsApp / phone · Hotel/villa referrals · Viator / GetYourGuide · Direct website · Walk-in · Other platforms</div><div class="q-type">—</div></div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="q-group">
+    <div class="q-group-header"><div class="q-group-num">Step 05 / 05</div><div class="q-group-title">Your Contact</div></div>
+    <div class="q-list">
+      <div class="q-item"><div class="q-label">Q13</div><div class="q-text">Your name</div><div class="q-type">text input</div></div>
+      <div class="q-item"><div class="q-label">Q14</div><div class="q-text">Email address</div><div class="q-type">email</div></div>
+      <div class="q-item"><div class="q-label">Q15</div><div class="q-text">WhatsApp number<br/><small style="color:#888">This is how we'll reach you first. Include country code: +30...</small></div><div class="q-type">tel</div></div>
+    </div>
+  </div>
+
+  <div class="principle"><p>"Thank you. We review every operator application personally. If there's a fit, Spyros will be in touch on WhatsApp within 48 hours."</p></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">08</div>
+  <h2>UI/UX Recommendations</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Typography System</div>
+      <h4>Two fonts. Total restraint.</h4>
+      <ul>
+        <li><strong>Fraunces</strong> — weight 200–300, display only. Headlines, pull quotes, wordmark. Use italic sparingly for editorial emphasis. Never in body.</li>
+        <li><strong>Plus Jakarta Sans</strong> — weight 200–400. All body copy, labels, forms, buttons. Weight 300 as default. Weight 400 for emphasis only.</li>
+        <li>Scale: display 3–6rem · headline 1.4–2.2rem · body 0.85–1rem · label 0.65rem tracking 0.25em uppercase</li>
+        <li>Line-height: display 1.05 · body 1.75 · labels 1.2</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Colour System</div>
+      <h4>Dark dominant. Cream breathes.</h4>
+      <div class="palette">
+        <div class="swatch"><div class="swatch-dot" style="background:#0e0e0e"></div><div class="swatch-label">#0e0e0e — Primary BG</div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#1B2D4F"></div><div class="swatch-label">#1B2D4F — Navy mid</div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#FDFCFA"></div><div class="swatch-label">#FDFCFA — Cream / text on dark</div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#C4A55A"></div><div class="swatch-label">#C4A55A — Gold / accent</div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#1A8A7D"></div><div class="swatch-label">#1A8A7D — Teal / CTA only</div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#D4854A"></div><div class="swatch-label">#D4854A — Terra / warm accent</div></div>
+      </div>
+      <p style="font-size:0.78rem;margin-top:0.5rem;">Use: dark 70% · cream 20% · gold 8% · teal 2%. Teal only for submit/primary CTA. Gold for eyebrows, underlines, decorative rules. Terra sparingly for warmth in photo sections.</p>
+    </div>
+  </div>
+
+  <h3>Component Principles</h3>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-label">Buttons</div>
+      <h4>One style. Two weights.</h4>
+      <ul>
+        <li>Primary: teal background, cream text, no border-radius (or very subtle: 2px max)</li>
+        <li>Ghost: transparent, cream border, cream text — for secondary actions</li>
+        <li>Text link: cream text + animated gold underline on hover. Used for CTAs inside dark sections.</li>
+        <li>Never use rounded pill buttons — too casual for this brand.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Forms</div>
+      <h4>Invisible until needed.</h4>
+      <ul>
+        <li>Input: near-transparent background, 0.5px bottom border only (not full border box)</li>
+        <li>Focus: bottom border becomes gold. No glow, no outline.</li>
+        <li>Label: floats above on focus (material design pattern) — ultra-small uppercase</li>
+        <li>Progress bar: thin 1px gold line, expands left to right. Top of the form area.</li>
+        <li>No box-shadow on any form element.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Images</div>
+      <h4>Always full-bleed or nothing.</h4>
+      <ul>
+        <li>No rounded corners on any content image</li>
+        <li>Overlay: rgba(0,0,0,0.2–0.35) — never block the image</li>
+        <li>Aspect ratio locked: 16:9 or 3:2 landscape for atmosphere sections</li>
+        <li>No image borders or box shadows</li>
+        <li>Alt text: always present but minimal — "Island coastline, Crete"</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Navigation Behaviour</h3>
+  <div class="card">
+    <ul>
+      <li><strong>On load:</strong> nav is invisible. Only the video plays.</li>
+      <li><strong>On first scroll:</strong> nav fades in (opacity 0 → 1, 400ms). Logo top-left. Two links top-right: "For Hosts" and "For Operators".</li>
+      <li><strong>On scroll down:</strong> nav shrinks slightly (padding reduces). Background: rgba(0,0,0,0.7) backdrop-filter blur.</li>
+      <li><strong>On /hosts and /operators pages:</strong> nav always visible from load. Single back arrow or wordmark links back to homepage.</li>
+      <li>No mobile hamburger menu unless needed for /hosts and /operators — these pages are simple enough to not need navigation.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">09</div>
+  <h2>Motion & Animation Recommendations</h2>
+  <p class="intro-text">Every animation serves a purpose. Nothing moves without reason. The overall feeling: weight. Confidence. Nothing is rushed. Nothing bounces.</p>
+
+  <table>
+    <thead>
+      <tr><th>Element</th><th>Trigger</th><th>Animation</th><th>Duration / Easing</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Hero video</td><td>Page load</td><td>Fade in from black, 0 → opacity 0.85</td><td>1.2s · linear</td><td>Cinematic entry, not jarring</td></tr>
+      <tr><td>Wordmark (hero)</td><td>After video fade</td><td>translateY 20px → 0, opacity 0 → 1</td><td>1s · cubic-bezier(0.16,1,0.3,1) · delay 0.8s</td><td>Typography arrives with weight</td></tr>
+      <tr><td>Nav bar</td><td>First scroll</td><td>Opacity 0 → 1</td><td>0.4s · ease</td><td>Non-intrusive appearance</td></tr>
+      <tr><td>Section headlines</td><td>Scroll enter (IntersectionObserver)</td><td>translateY 24px → 0, opacity 0 → 1</td><td>0.9s · cubic-bezier(0.16,1,0.3,1)</td><td>Each section earns attention</td></tr>
+      <tr><td>Atmosphere images</td><td>Scroll enter</td><td>Scale 1.04 → 1.0 (subtle zoom out)</td><td>1.4s · ease-out</td><td>Images feel alive, not static</td></tr>
+      <tr><td>Split sections (S5/S6)</td><td>Scroll enter</td><td>Left: translateX(-20px) → 0 · Right: translateX(20px) → 0</td><td>1s · ease-out · 100ms stagger</td><td>Spatial arrival</td></tr>
+      <tr><td>CTA links</td><td>Hover</td><td>Gold underline width: 0 → 100%</td><td>0.35s · ease</td><td>Premium hover state</td></tr>
+      <tr><td>Form progress bar</td><td>Step advance</td><td>Width transition 20% increments</td><td>0.5s · ease-in-out</td><td>Clear progress feedback</td></tr>
+      <tr><td>Form step transition</td><td>Next/back</td><td>Current step: opacity → 0, translateX(-20px). New step: from +20px → 0</td><td>0.4s · ease</td><td>Directional orientation</td></tr>
+      <tr><td>Submit success</td><td>API success</td><td>Form fades out, thank-you message fades in + subtle scale 0.97→1</td><td>0.6s · ease</td><td>Satisfying close</td></tr>
+      <tr><td>Background images (scroll)</td><td>Scroll position</td><td>Parallax: translateY at 0.3x scroll rate</td><td>CSS transform, no JS jank</td><td>Depth, cinematic feel</td></tr>
+    </tbody>
+  </table>
+
+  <h3>GSAP Usage Guidelines</h3>
+  <div class="card">
+    <ul>
+      <li>Use GSAP ScrollTrigger for all scroll-based reveals. Set <code>start: "top 80%"</code> — not 100% (too late).</li>
+      <li>Use Lenis for smooth scroll momentum. Configure: <code>lerp: 0.07</code> for a slow, weighty feel.</li>
+      <li>Avoid Spring physics — they feel too bouncy for this brand. Use <code>ease: "power3.out"</code> throughout.</li>
+      <li>No scroll-jacking on the homepage. Smooth scroll only — never override vertical position.</li>
+      <li>Video: no JS fade — use CSS opacity transition on the video element triggered by canplay event.</li>
+      <li>Reduce motion: add <code>@media (prefers-reduced-motion: reduce)</code> — disable all transforms, keep opacity fades only.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">10</div>
+  <h2>Conversion Strategy</h2>
+  <p class="intro-text">The tension: conversion and premium positioning are usually in conflict. A high-converting site uses urgency, CTAs, social proof, and friction reduction. A premium experience uses restraint, trust, and atmosphere. Island Key leans premium — but conversion still matters. The strategy is to remove every unnecessary step while preserving every atmospheric moment.</p>
+
+  <div class="principle"><p>"The right partner will convert themselves. Our job is to not lose them to friction or confusion."</p></div>
+
+  <h3>Conversion Funnel</h3>
+  <div class="funnel">
+    <div class="funnel-stage"><div class="funnel-label">Arrive</div><div class="funnel-text">Visitor lands on homepage via referral, outreach, or email. First impression: cinematic, credible, not a startup landing page.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Feel</div><div class="funnel-text">Video hero + atmosphere sections establish the world. S2 statement makes them stop. They understand what Island Key IS without reading a features list.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Identify</div><div class="funnel-text">S5/S6 split sections. Visitor self-identifies: "I'm a host" or "I'm an operator." Single CTA per section. Clear destination.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Trust</div><div class="funnel-text">Landing page for their path (/hosts or /operators) reinforces what makes Island Key worth their time. Minimal. Confident. No fluff.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Apply</div><div class="funnel-text">5-step questionnaire. Mobile-optimised. One question visible at a time (card flow). Progress visible. 5 minutes maximum.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Convert</div><div class="funnel-text">Submit → thank-you moment + confirmation email + Spyros notified on WhatsApp + email. Review within 48 hours.</div></div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-stage"><div class="funnel-label">Refer</div><div class="funnel-text">Success screen: "Know someone else who should join?" Subtle referral prompt — not a share button blast. A single pre-composed WhatsApp share link.</div></div>
+  </div>
+
+  <h3>Conversion Levers (Premium-Compatible)</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Do These</div>
+      <h4>Friction reducers</h4>
+      <ul>
+        <li>One CTA per section — never two competing actions</li>
+        <li>Form: one question at a time (conversational UI reduces abandonment by 40%+)</li>
+        <li>Mobile first: 90% of visitors will be on phone</li>
+        <li>Pre-fill where possible (URL params for referral context)</li>
+        <li>Autofocus first field on each step</li>
+        <li>WhatsApp as primary contact (local trust signal)</li>
+        <li>48-hour response promise on success screen</li>
+        <li>"Applications reviewed individually" — signals exclusivity, not bureaucracy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Avoid These</div>
+      <h4>Conversion tactics that break premium</h4>
+      <ul>
+        <li>No "Limited spots available" urgency copy</li>
+        <li>No countdown timers</li>
+        <li>No social proof widgets ("12 people applied today")</li>
+        <li>No popup overlays or exit-intent interruptions</li>
+        <li>No chat widget (unless WhatsApp business — and even then, subtle)</li>
+        <li>No star ratings or review aggregators on the site</li>
+        <li>No auto-playing sound</li>
+        <li>No "FREE" anywhere — commission model doesn't need it</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Referral Mechanic</h3>
+  <div class="card">
+    <p>On the success screen after submission, include a single line:<br/>
+    <em>"If you know a property or local business that belongs in this network, share this link with them."</em><br/><br/>
+    Below it: a pre-composed WhatsApp share link with the text: <em>"I just applied to Island Key — a new concierge platform launching in Crete. Thought you might be interested: www.islandkey.gr"</em><br/><br/>
+    No buttons. No share count. Just a quiet invitation. This matches the "invitation culture" brief perfectly while generating organic referral growth.</p>
+  </div>
+
+  <h3>Analytics Events to Track</h3>
+  <div class="card">
+    <table>
+      <thead><tr><th>Event</th><th>Where</th><th>Signal</th></tr></thead>
+      <tbody>
+        <tr><td>video_play</td><td>Hero</td><td>Engagement with hero</td></tr>
+        <tr><td>host_cta_click</td><td>S5 + /hosts hero</td><td>Host intent</td></tr>
+        <tr><td>operator_cta_click</td><td>S6 + /operators hero</td><td>Operator intent</td></tr>
+        <tr><td>form_step_N_complete</td><td>Each form step</td><td>Drop-off analysis per step</td></tr>
+        <tr><td>form_submit</td><td>Step 5 submit</td><td>Primary conversion</td></tr>
+        <tr><td>referral_share_click</td><td>Success screen</td><td>Referral loop activation</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="background:var(--ink);color:var(--cream);padding:48px 64px;display:flex;justify-content:space-between;align-items:center;">
+  <div style="font-family:'Fraunces',serif;font-weight:200;font-size:1.2rem;letter-spacing:0.1em;">Island Key</div>
+  <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;opacity:0.3;font-weight:300;">Website Architecture v1 · June 2026 · Locus Design + Innovation</div>
+</div>
+
+</body>
+</html>
