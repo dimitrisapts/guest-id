@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Registration Link Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 32px;
+            width: 100%;
+            max-width: 420px;
+        }
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #555;
+        }
+        select, input[type="date"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            background: #fafafa;
+            appearance: none;
+            -webkit-appearance: none;
+            margin-bottom: 20px;
+        }
+        select {
+            background: #fafafa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center;
+            padding-right: 32px;
+        }
+        select:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #4a90d9;
+            box-shadow: 0 0 0 3px rgba(74,144,217,0.1);
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #4a90d9;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .btn-primary:hover { background: #3a7bc8; }
+        .btn-whatsapp {
+            background: #25D366;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .btn-whatsapp:hover { background: #1da851; }
+        #output {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .link-box {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            word-break: break-all;
+            color: #555;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .btn-copy {
+            background: #eee;
+            color: #333;
+            font-size: 13px;
+            padding: 8px;
+        }
+        .btn-copy:hover { background: #ddd; }
+        .copied {
+            background: #d4edda !important;
+            color: #155724 !important;
+        }
+        .msg-box {
+            background: #f0f7ff;
+            border: 1px solid #d0e3f7;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #444;
+            margin-bottom: 10px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .btn-copy-msg {
+            background: #e8f0fe;
+            color: #1a56db;
+            font-size: 13px;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-copy-msg:hover { background: #d0e3f7; }
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Guest Registration</h1>
+        <p class="subtitle">Generate a pre-filled registration link</p>
+
+        <label for="apartment">Apartment</label>
+        <select id="apartment" required>
+            <option value="" disabled selected>Select apartment</option>
+            <option>A1</option>
+            <option>A2</option>
+            <option>A3</option>
+            <option>B1</option>
+            <option>B2</option>
+            <option>B3</option>
+            <option>B4</option>
+            <option>B5</option>
+            <option>B6</option>
+            <option>G1</option>
+        </select>
+
+        <label for="checkin">Check-in date</label>
+        <input type="date" id="checkin" required>
+
+        <button class="btn btn-primary" onclick="generate()">Generate Link</button>
+
+        <div id="output">
+            <a id="whatsappBtn" class="btn btn-whatsapp" href="#" target="_blank">Send via WhatsApp</a>
+
+            <div class="section-label">Full message (for Booking.com etc.)</div>
+            <div class="msg-box" id="messageBox"></div>
+            <button class="btn btn-copy-msg" onclick="copyMessage()">Copy message</button>
+
+            <div class="section-label">Raw link</div>
+            <div class="link-box" id="linkBox"></div>
+            <button class="btn btn-copy" onclick="copyLink()">Copy link</button>
+        </div>
+    </div>
+
+    <script>
+        const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSeqpcUo9WfQY0zwpH9Cgm5LoKotlMr5vWdd7AEodJVt8BG-wA/viewform';
+        const ENTRY_APARTMENT = 'entry.888208026';
+        const ENTRY_CHECKIN   = 'entry.1723899023';
+
+        function generate() {
+            const apt = document.getElementById('apartment').value;
+            const checkin = document.getElementById('checkin').value;
+
+            if (!apt || !checkin) {
+                alert('Please select an apartment and check-in date.');
+                return;
+            }
+
+            const formUrl = FORM_BASE
+                + '?' + ENTRY_APARTMENT + '=' + encodeURIComponent(apt)
+                + '&' + ENTRY_CHECKIN + '=' + encodeURIComponent(checkin);
+
+            const message = 'Hi! As required by Greek law, we need to register all guests staying with us. '
+                + 'It only takes a minute \u2014 please fill in the details for everyone in your party here:\n\n'
+                + formUrl
+                + '\n\nThank you,\nDimitris \u2014 City Break Apts';
+
+            const whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
+
+            document.getElementById('linkBox').textContent = formUrl;
+            document.getElementById('messageBox').textContent = message;
+            document.getElementById('whatsappBtn').href = whatsappUrl;
+            document.getElementById('output').style.display = 'block';
+        }
+
+        function copyLink() {
+            const link = document.getElementById('linkBox').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.querySelector('.btn-copy');
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy link'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+
+        function copyMessage() {
+            const msg = document.getElementById('messageBox').textContent;
+            navigator.clipboard.writeText(msg).then(() => {
+                const btn = document.querySelector('.btn-copy-msg');
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy message'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
