@@ -119,11 +119,14 @@
             border: 1px solid #d0e3f7;
             border-radius: 8px;
             padding: 10px 12px;
-            font-size: 12px;
+            font-size: 13px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: #444;
             margin-bottom: 10px;
             line-height: 1.6;
-            white-space: pre-wrap;
+            width: 100%;
+            min-height: 160px;
+            resize: vertical;
         }
         .btn-copy-msg {
             background: #e8f0fe;
@@ -172,7 +175,7 @@
             <a id="whatsappBtn" class="btn btn-whatsapp" href="#" target="_blank">Send via WhatsApp</a>
 
             <div class="section-label">Full message (for Booking.com etc.)</div>
-            <div class="msg-box" id="messageBox"></div>
+            <textarea class="msg-box" id="messageBox" rows="8"></textarea>
             <button class="btn btn-copy-msg" onclick="copyMessage()">Copy message</button>
 
             <div class="section-label">Raw link</div>
@@ -204,13 +207,16 @@
                 + formUrl
                 + '\n\nThank you,\nDimitris \u2014 City Break Apts';
 
-            const whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
-
             document.getElementById('linkBox').textContent = formUrl;
-            document.getElementById('messageBox').textContent = message;
-            document.getElementById('whatsappBtn').href = whatsappUrl;
+            document.getElementById('messageBox').value = message;
+            document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(message);
             document.getElementById('output').style.display = 'block';
         }
+
+        // Update WhatsApp link whenever the message is edited
+        document.getElementById('messageBox').addEventListener('input', function() {
+            document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(this.value);
+        });
 
         function copyLink() {
             const link = document.getElementById('linkBox').textContent;
@@ -223,7 +229,7 @@
         }
 
         function copyMessage() {
-            const msg = document.getElementById('messageBox').textContent;
+            const msg = document.getElementById('messageBox').value;
             navigator.clipboard.writeText(msg).then(() => {
                 const btn = document.querySelector('.btn-copy-msg');
                 btn.textContent = 'Copied!';
