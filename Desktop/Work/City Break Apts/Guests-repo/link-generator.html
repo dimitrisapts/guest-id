@@ -175,6 +175,14 @@
             <a id="whatsappBtn" class="btn btn-whatsapp" href="#" target="_blank">Send via WhatsApp</a>
 
             <div class="section-label">Full message (for Booking.com etc.)</div>
+            <div style="margin-bottom:8px;">
+                <label style="display:inline;cursor:pointer;margin-right:12px;">
+                    <input type="radio" name="lang" value="en" checked onchange="switchLang()"> English
+                </label>
+                <label style="display:inline;cursor:pointer;">
+                    <input type="radio" name="lang" value="el" onchange="switchLang()"> Greek
+                </label>
+            </div>
             <textarea class="msg-box" id="messageBox" rows="8"></textarea>
             <button class="btn btn-copy-msg" onclick="copyMessage()">Copy message</button>
 
@@ -189,6 +197,29 @@
         const ENTRY_APARTMENT = 'entry.888208026';
         const ENTRY_CHECKIN   = 'entry.1723899023';
 
+        var currentFormUrl = '';
+
+        function getMessageEN(url) {
+            return 'Hi! As required by Greek law, we need to register all guests staying with us. '
+                + 'It only takes a minute \u2014 please fill in the details for everyone in your party here:\n\n'
+                + url
+                + '\n\nThank you,\nDimitris City Break Apts';
+        }
+
+        function getMessageEL(url) {
+            return '\u0393\u03b5\u03b9\u03b1 \u03c3\u03b1\u03c2! \u03a3\u03cd\u03bc\u03c6\u03c9\u03bd\u03b1 \u03bc\u03b5 \u03c4\u03b7\u03bd \u03b5\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ae \u03bd\u03bf\u03bc\u03bf\u03b8\u03b5\u03c3\u03af\u03b1, \u03b5\u03af\u03bc\u03b1\u03c3\u03c4\u03b5 \u03c5\u03c0\u03bf\u03c7\u03c1\u03b5\u03c9\u03bc\u03ad\u03bd\u03bf\u03b9 \u03bd\u03b1 \u03ba\u03b1\u03c4\u03b1\u03c7\u03c9\u03c1\u03ae\u03c3\u03bf\u03c5\u03bc\u03b5 \u03c4\u03b1 \u03c3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03b1 \u03cc\u03bb\u03c9\u03bd \u03c4\u03c9\u03bd \u03b5\u03c0\u03b9\u03c3\u03ba\u03b5\u03c0\u03c4\u03ce\u03bd. \u03a7\u03c1\u03b5\u03b9\u03ac\u03b6\u03b5\u03c4\u03b1\u03b9 \u03bc\u03cc\u03bd\u03bf \u03ad\u03bd\u03b1 \u03bb\u03b5\u03c0\u03c4\u03cc \u2014 \u03c0\u03b1\u03c1\u03b1\u03ba\u03b1\u03bb\u03bf\u03cd\u03bc\u03b5 \u03c3\u03c5\u03bc\u03c0\u03bb\u03b7\u03c1\u03ce\u03c3\u03c4\u03b5 \u03c4\u03b1 \u03c3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03b1 \u03b3\u03b9\u03b1 \u03cc\u03bb\u03bf\u03c5\u03c2 \u03c3\u03c4\u03b7\u03bd \u03c0\u03b1\u03c1\u03ad\u03b1 \u03c3\u03b1\u03c2 \u03b5\u03b4\u03ce:\n\n'
+                + url
+                + '\n\n\u0395\u03c5\u03c7\u03b1\u03c1\u03b9\u03c3\u03c4\u03bf\u03cd\u03bc\u03b5,\nDimitris City Break Apts';
+        }
+
+        function switchLang() {
+            if (!currentFormUrl) return;
+            var lang = document.querySelector('input[name="lang"]:checked').value;
+            var message = (lang === 'el') ? getMessageEL(currentFormUrl) : getMessageEN(currentFormUrl);
+            document.getElementById('messageBox').value = message;
+            document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(message);
+        }
+
         function generate() {
             const apt = document.getElementById('apartment').value;
             const checkin = document.getElementById('checkin').value;
@@ -198,16 +229,14 @@
                 return;
             }
 
-            const formUrl = FORM_BASE
+            currentFormUrl = FORM_BASE
                 + '?' + ENTRY_APARTMENT + '=' + encodeURIComponent(apt)
                 + '&' + ENTRY_CHECKIN + '=' + encodeURIComponent(checkin);
 
-            const message = 'Hi! As required by Greek law, we need to register all guests staying with us. '
-                + 'It only takes a minute \u2014 please fill in the details for everyone in your party here:\n\n'
-                + formUrl
-                + '\n\nThank you,\nDimitris City Break Apts';
+            var lang = document.querySelector('input[name="lang"]:checked').value;
+            var message = (lang === 'el') ? getMessageEL(currentFormUrl) : getMessageEN(currentFormUrl);
 
-            document.getElementById('linkBox').textContent = formUrl;
+            document.getElementById('linkBox').textContent = currentFormUrl;
             document.getElementById('messageBox').value = message;
             document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(message);
             document.getElementById('output').style.display = 'block';
