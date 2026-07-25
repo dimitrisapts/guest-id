@@ -12,23 +12,25 @@ var NOTIFY_EMAIL = 'dimitriscitybreakapts@gmail.com';
 var FORM_ID = '1bVXUpy_i9YyK2u49k38iT4HTR-RaoLPFiU3YhX0dGdE';
 
 function onFormSubmit() {
+  // Acquire script-wide lock to prevent simultaneous executions
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) {
+    Logger.log('LOCK FAILED: another execution is in progress, exiting');
+    return;
+  }
+
+  try {
+    _processFormSubmission();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function _processFormSubmission() {
   // Get the latest form response directly (works for standalone scripts)
   var form = FormApp.openById(FORM_ID);
   var allResponses = form.getResponses();
   var latest = allResponses[allResponses.length - 1];
-
-  // Idempotency guard: skip if this response was already processed within 30s
-  var responseId = latest.getId();
-  var props = PropertiesService.getScriptProperties();
-  var lastProcessed = props.getProperty('lastResponseId');
-  var lastTimestamp = Number(props.getProperty('lastResponseTimestamp') || 0);
-  var now = new Date().getTime();
-  if (lastProcessed === responseId && (now - lastTimestamp) < 30000) {
-    Logger.log('IDEMPOTENCY SKIP: response ' + responseId + ' already processed ' + (now - lastTimestamp) + 'ms ago');
-    return;
-  }
-  props.setProperty('lastResponseId', responseId);
-  props.setProperty('lastResponseTimestamp', String(now));
 
   var responses = latest.getItemResponses();
 
@@ -76,14 +78,28 @@ function onFormSubmit() {
     throw new Error('Sheet "' + SHEET_NAME + '" not found in spreadsheet. Check SHEET_NAME constant.');
   }
 
-  // Duplicate check: skip if Apartment + Check-in date + Guest 1 name already exists
+  // Duplicate check: skip if a row with the same Guest 1 name and check-in date
+  // was written in the last 60 seconds (catches rapid re-fires of the same submission)
   var guest1Name = guests[0].name;
   var lastRow = sheet.getLastRow();
   if (lastRow >= 2) {
-    var existing = sheet.getRange('B2:E' + lastRow).getValues(); // cols B(apt), C(name), D(nat), E(checkin)
-    for (var d = 0; d < existing.length; d++) {
-      if (existing[d][0] === apartment && existing[d][3] === checkinFormatted && existing[d][1] === guest1Name) {
-        Logger.log('DUPLICATE SKIPPED: ' + apartment + ' / ' + checkinFormatted + ' / ' + guest1Name);
+    var now = new Date();
+    var existing = sheet.getRange('C2:E' + lastRow).getValues(); // cols C(name), D(nat), E(checkin)
+    for (var d = existing.length - 1; d >= 0; d--) {
+      var rowName = existing[d][0];
+      var rowCheckin = existing[d][2];
+      if (rowName === guest1Name && rowCheckin === checkinFormatted) {
+        // Check if this row's timestamp (column A, row d+2) is within 60s
+        var rowTimestamp = sheet.getRange(d + 2, 1).getValue();
+        if (rowTimestamp instanceof Date) {
+          var ageMs = now.getTime() - rowTimestamp.getTime();
+          if (ageMs >= 0 && ageMs < 60000) {
+            Logger.log('DUPLICATE DETECTED: ' + guest1Name + ' / ' + checkinFormatted + ' written ' + ageMs + 'ms ago');
+            return;
+          }
+        }
+        // No timestamp — fall back to treating matching name+checkin as duplicate
+        Logger.log('DUPLICATE SKIPPED (exact match): ' + apartment + ' / ' + checkinFormatted + ' / ' + guest1Name);
         return;
       }
     }
@@ -100,10 +116,12 @@ function onFormSubmit() {
   // Find last occupied row by checking column C (Name)
   var lastDataRow = getLastRowInColC(sheet);
 
-  // Append one row per guest — write to columns B:H directly (skip col A)
+  // Append one row per guest — write to columns A:H
+  var writeTimestamp = new Date();
   for (var g = 0; g < guests.length; g++) {
     var targetRow = lastDataRow + 1 + g;
     var row = [
+      writeTimestamp,                        // A — write timestamp (for duplicate detection)
       g === 0 ? apartment : '',              // B — APT (first row only)
       guests[g].name,                        // C — Name
       guests[g].nationality,                 // D — Nationality
@@ -112,7 +130,7 @@ function onFormSubmit() {
       g === 0 ? nextNo : '',                 // G — No (first row only)
       guests[g].id                           // H — ID/Passport
     ];
-    sheet.getRange(targetRow, 2, 1, 7).setValues([row]); // cols B(2) through H(8)
+    sheet.getRange(targetRow, 1, 1, 8).setValues([row]); // cols A(1) through H(8)
   }
 
   // Send confirmation email
