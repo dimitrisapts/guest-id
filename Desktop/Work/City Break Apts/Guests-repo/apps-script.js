@@ -79,18 +79,17 @@ function _processFormSubmission() {
   }
 
   // Duplicate check: skip if a row with the same Guest 1 name and check-in date
-  // was written in the last 60 seconds (catches rapid re-fires of the same submission)
+  // was written in the last 60 seconds (timestamp stored in column I)
   var guest1Name = guests[0].name;
   var lastRow = sheet.getLastRow();
   if (lastRow >= 2) {
     var now = new Date();
-    var existing = sheet.getRange('C2:E' + lastRow).getValues(); // cols C(name), D(nat), E(checkin)
+    var existing = sheet.getRange(2, 3, lastRow - 1, 7).getValues(); // cols C..I (index 0=C,2=E,6=I)
     for (var d = existing.length - 1; d >= 0; d--) {
-      var rowName = existing[d][0];
-      var rowCheckin = existing[d][2];
+      var rowName = existing[d][0];       // C — Guest name
+      var rowCheckin = existing[d][2];     // E — Check-in date
       if (rowName === guest1Name && rowCheckin === checkinFormatted) {
-        // Check if this row's timestamp (column A, row d+2) is within 60s
-        var rowTimestamp = sheet.getRange(d + 2, 1).getValue();
+        var rowTimestamp = existing[d][6]; // I — Write timestamp
         if (rowTimestamp instanceof Date) {
           var ageMs = now.getTime() - rowTimestamp.getTime();
           if (ageMs >= 0 && ageMs < 60000) {
@@ -116,21 +115,21 @@ function _processFormSubmission() {
   // Find last occupied row by checking column C (Name)
   var lastDataRow = getLastRowInColC(sheet);
 
-  // Append one row per guest — write to columns A:H
+  // Append one row per guest — write to columns B:I (skip col A which has a formula)
   var writeTimestamp = new Date();
   for (var g = 0; g < guests.length; g++) {
     var targetRow = lastDataRow + 1 + g;
     var row = [
-      writeTimestamp,                        // A — write timestamp (for duplicate detection)
       g === 0 ? apartment : '',              // B — APT (first row only)
       guests[g].name,                        // C — Name
       guests[g].nationality,                 // D — Nationality
       checkinFormatted,                      // E — Check-in date
       '',                                    // F — blank
       g === 0 ? nextNo : '',                 // G — No (first row only)
-      guests[g].id                           // H — ID/Passport
+      guests[g].id,                          // H — ID/Passport
+      writeTimestamp                         // I — write timestamp (for duplicate detection)
     ];
-    sheet.getRange(targetRow, 1, 1, 8).setValues([row]); // cols A(1) through H(8)
+    sheet.getRange(targetRow, 2, 1, 8).setValues([row]); // cols B(2) through I(9)
   }
 
   // Send confirmation email
