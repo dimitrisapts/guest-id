@@ -3,6 +3,8 @@
  * Triggers on form submission, writes guest rows to Sheet3,
  * and sends a confirmation email.
  *
+ * Duplicate cleanup runs separately via a time-based trigger (every 5 min).
+ *
  * Install: see deployment instructions at the bottom of this file.
  */
 
@@ -12,22 +14,6 @@ var NOTIFY_EMAIL = 'dimitriscitybreakapts@gmail.com';
 var FORM_ID = '1bVXUpy_i9YyK2u49k38iT4HTR-RaoLPFiU3YhX0dGdE';
 
 function onFormSubmit() {
-  // Acquire script-wide lock to prevent simultaneous executions
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) {
-    Logger.log('LOCK FAILED: another execution is in progress, exiting');
-    return;
-  }
-
-  try {
-    _processFormSubmission();
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function _processFormSubmission() {
-  // Get the latest form response directly (works for standalone scripts)
   var form = FormApp.openById(FORM_ID);
   var allResponses = form.getResponses();
   var latest = allResponses[allResponses.length - 1];
@@ -69,39 +55,13 @@ function _processFormSubmission() {
 
   if (guests.length === 0) return;
 
-  // Open spreadsheet — needed early for duplicate check
+  // Open spreadsheet
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     Logger.log('ERROR: Sheet "' + SHEET_NAME + '" not found. Available sheets: ' +
       ss.getSheets().map(function(s) { return s.getName(); }).join(', '));
     throw new Error('Sheet "' + SHEET_NAME + '" not found in spreadsheet. Check SHEET_NAME constant.');
-  }
-
-  // Duplicate check: skip if a row with the same Guest 1 name and check-in date
-  // was written in the last 60 seconds (timestamp stored in column I)
-  var guest1Name = guests[0].name;
-  var lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    var now = new Date();
-    var existing = sheet.getRange(2, 3, lastRow - 1, 7).getValues(); // cols C..I (index 0=C,2=E,6=I)
-    for (var d = existing.length - 1; d >= 0; d--) {
-      var rowName = existing[d][0];       // C — Guest name
-      var rowCheckin = existing[d][2];     // E — Check-in date
-      if (rowName === guest1Name && rowCheckin === checkinFormatted) {
-        var rowTimestamp = existing[d][6]; // I — Write timestamp
-        if (rowTimestamp instanceof Date) {
-          var ageMs = now.getTime() - rowTimestamp.getTime();
-          if (ageMs >= 0 && ageMs < 60000) {
-            Logger.log('DUPLICATE DETECTED: ' + guest1Name + ' / ' + checkinFormatted + ' written ' + ageMs + 'ms ago');
-            return;
-          }
-        }
-        // No timestamp — fall back to treating matching name+checkin as duplicate
-        Logger.log('DUPLICATE SKIPPED (exact match): ' + apartment + ' / ' + checkinFormatted + ' / ' + guest1Name);
-        return;
-      }
-    }
   }
 
   // Get next "No" — check both Sheet2 (historical) and Sheet3 (new intake)
@@ -115,8 +75,7 @@ function _processFormSubmission() {
   // Find last occupied row by checking column C (Name)
   var lastDataRow = getLastRowInColC(sheet);
 
-  // Append one row per guest — write to columns B:I (skip col A which has a formula)
-  var writeTimestamp = new Date();
+  // Append one row per guest — write to columns B:H (skip col A which has a formula)
   for (var g = 0; g < guests.length; g++) {
     var targetRow = lastDataRow + 1 + g;
     var row = [
@@ -126,14 +85,108 @@ function _processFormSubmission() {
       checkinFormatted,                      // E — Check-in date
       '',                                    // F — blank
       g === 0 ? nextNo : '',                 // G — No (first row only)
-      guests[g].id,                          // H — ID/Passport
-      writeTimestamp                         // I — write timestamp (for duplicate detection)
+      guests[g].id                           // H — ID/Passport
     ];
-    sheet.getRange(targetRow, 2, 1, 8).setValues([row]); // cols B(2) through I(9)
+    sheet.getRange(targetRow, 2, 1, 7).setValues([row]); // cols B(2) through H(8)
   }
 
   // Send confirmation email
   sendNotification(apartment, checkinFormatted, guests);
+}
+
+/**
+ * Removes duplicate rows from Sheet3.
+ * A duplicate is a row with the same APT (col B) + Guest 1 name (col C) +
+ * Check-in date (col E) that appears more than once.
+ * When duplicates are found, the FIRST occurrence is kept and later ones
+ * are deleted. Only rows whose "No" values (col G) are within 2 of each
+ * other are considered duplicates (to avoid deleting legitimate repeat guests).
+ *
+ * Run via a time-based trigger every 5 minutes.
+ */
+function removeDuplicates() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return; // need at least 2 data rows to have duplicates
+
+  // Read cols B:G (indices: 0=B/apt, 1=C/name, 2=D/nat, 3=E/checkin, 4=F, 5=G/no)
+  var data = sheet.getRange(2, 2, lastRow - 1, 6).getValues();
+
+  // Build a map of signature → first row index
+  // Signature = APT + "|" + Guest1Name + "|" + CheckinDate
+  var seen = {};       // signature → { row: dataIndex, no: number }
+  var rowsToDelete = []; // sheet row numbers (1-based) to delete
+
+  for (var i = 0; i < data.length; i++) {
+    var apt = String(data[i][0]).trim();
+    var name = String(data[i][1]).trim();
+    var checkin = String(data[i][3]).trim();
+    var no = Number(data[i][5]);
+
+    // Skip rows without a name (secondary guest rows or empty rows)
+    if (name === '') continue;
+    // Skip rows without an apartment (secondary guest rows)
+    if (apt === '') continue;
+
+    var sig = apt + '|' + name + '|' + checkin;
+
+    if (seen[sig]) {
+      // Check if the "No" values are close (within 2) — confirms same submission batch
+      var firstNo = seen[sig].no;
+      if (!isNaN(no) && !isNaN(firstNo) && Math.abs(no - firstNo) <= 2) {
+        // This is a duplicate — mark the later row for deletion
+        var sheetRow = i + 2; // data index 0 = sheet row 2
+        rowsToDelete.push(sheetRow);
+        Logger.log('DUPLICATE FOUND row ' + sheetRow + ': ' + sig + ' (No ' + no + ' vs ' + firstNo + ')');
+
+        // Also delete any secondary guest rows that follow this duplicate
+        for (var j = i + 1; j < data.length; j++) {
+          var nextApt = String(data[j][0]).trim();
+          var nextName = String(data[j][1]).trim();
+          if (nextApt !== '' || nextName === '') break; // reached next group or empty
+          rowsToDelete.push(j + 2);
+        }
+      }
+    } else {
+      seen[sig] = { row: i, no: no };
+    }
+  }
+
+  // Delete from bottom to top so row numbers stay valid
+  rowsToDelete.sort(function(a, b) { return b - a; });
+  for (var k = 0; k < rowsToDelete.length; k++) {
+    sheet.deleteRow(rowsToDelete[k]);
+  }
+
+  if (rowsToDelete.length > 0) {
+    Logger.log('removeDuplicates: deleted ' + rowsToDelete.length + ' duplicate row(s)');
+  }
+}
+
+/**
+ * One-time setup: creates the time-based trigger for removeDuplicates.
+ * Run this function manually once from the Apps Script editor.
+ * It removes any existing removeDuplicates triggers first to avoid stacking.
+ */
+function installCleanupTrigger() {
+  // Remove existing removeDuplicates triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'removeDuplicates') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // Create new time-based trigger — every 5 minutes
+  ScriptApp.newTrigger('removeDuplicates')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+
+  Logger.log('installCleanupTrigger: removeDuplicates trigger created (every 5 min)');
 }
 
 function formatDate(dateStr) {
