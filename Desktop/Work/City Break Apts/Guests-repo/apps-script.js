@@ -72,12 +72,16 @@ function onFormSubmit() {
   if (sheet3Max > maxNo) maxNo = sheet3Max;
   var nextNo = maxNo + 1;
 
-  // Find last occupied row by checking column C (Name)
-  var lastDataRow = getLastRowInColC(sheet);
+  // Find the correct insertion row so Sheet3 stays sorted by check-in date (col E)
+  var insertAfterRow = findInsertionRow(sheet, checkinRaw);
 
-  // Append one row per guest — write to columns B:H (skip col A which has a formula)
+  // Insert blank rows at the correct position
+  sheet.insertRowsAfter(insertAfterRow, guests.length);
+  var firstNewRow = insertAfterRow + 1;
+
+  // Write one row per guest — columns B:H (skip col A which has a formula)
   for (var g = 0; g < guests.length; g++) {
-    var targetRow = lastDataRow + 1 + g;
+    var targetRow = firstNewRow + g;
     var row = [
       g === 0 ? apartment : '',              // B — APT (first row only)
       guests[g].name,                        // C — Name
@@ -187,6 +191,72 @@ function installCleanupTrigger() {
     .create();
 
   Logger.log('installCleanupTrigger: removeDuplicates trigger created (every 5 min)');
+}
+
+/**
+ * Finds the row after which new guest rows should be inserted so that
+ * Sheet3 stays sorted by check-in date (column E, ascending).
+ *
+ * Scans from the last data row upward. When it finds a row whose check-in
+ * date is <= the incoming date, it walks forward past any secondary guest
+ * rows (rows where col B is empty) that belong to that group, then returns
+ * that row number. If no earlier date is found, returns 1 (the header row).
+ */
+function findInsertionRow(sheet, checkinRaw) {
+  var lastDataRow = getLastRowInColC(sheet);
+  if (lastDataRow <= 1) return 1; // only header — insert after row 1
+
+  // Read cols B and E for all data rows (row 2 onward)
+  var numRows = lastDataRow - 1;
+  var colB = sheet.getRange(2, 2, numRows, 1).getValues(); // APT
+  var colE = sheet.getRange(2, 5, numRows, 1).getValues(); // Check-in
+
+  var incomingDate = parseToDate(checkinRaw);
+
+  // Scan from bottom to top to find the last row with check-in <= incoming
+  for (var i = numRows - 1; i >= 0; i--) {
+    var cellDate = parseToDate(colE[i][0]);
+    if (cellDate && incomingDate && cellDate.getTime() <= incomingDate.getTime()) {
+      // Found a row with an earlier or equal date.
+      // Walk forward past any secondary guest rows in this group
+      // (secondary rows have empty col B).
+      var groupEnd = i;
+      for (var j = i + 1; j < numRows; j++) {
+        if (String(colB[j][0]).trim() === '') {
+          groupEnd = j;
+        } else {
+          break;
+        }
+      }
+      return groupEnd + 2; // convert 0-based data index to 1-based sheet row
+    }
+  }
+
+  // All existing dates are after the incoming date — insert right after header
+  return 1;
+}
+
+/**
+ * Parses a date value into a JS Date.
+ * Handles: Date objects (from Sheets), "YYYY-MM-DD" (from Forms),
+ * and "dd/mm/yyyy" (our formatted strings).
+ */
+function parseToDate(val) {
+  if (val instanceof Date && !isNaN(val.getTime())) return val;
+  var s = String(val).trim();
+  if (s === '') return null;
+
+  // Try YYYY-MM-DD
+  var iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+
+  // Try dd/mm/yyyy
+  var dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+
+  // Fallback
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 function formatDate(dateStr) {
