@@ -1,9 +1,10 @@
 /**
  * Guest Registration — Google Apps Script
- * Triggers on form submission, writes guest rows to Sheet3,
- * and sends a confirmation email.
+ * Triggers on form submission, writes guest rows to Sheet3.
  *
- * Duplicate cleanup runs separately via a time-based trigger (every 5 min).
+ * Duplicate cleanup + email notifications run via a time-based trigger (every 5 min).
+ * Emails are sent from the cleanup function so they fire once per unique submission,
+ * after any duplicates have been removed.
  *
  * Install: see deployment instructions at the bottom of this file.
  */
@@ -94,8 +95,6 @@ function onFormSubmit() {
     sheet.getRange(targetRow, 2, 1, 7).setValues([row]); // cols B(2) through H(8)
   }
 
-  // Send confirmation email
-  sendNotification(apartment, checkinFormatted, guests);
 }
 
 /**
@@ -114,60 +113,123 @@ function removeDuplicates() {
   if (!sheet) return;
 
   var lastRow = sheet.getLastRow();
-  if (lastRow < 3) return; // need at least 2 data rows to have duplicates
+  if (lastRow < 2) return;
 
-  // Read cols B:G (indices: 0=B/apt, 1=C/name, 2=D/nat, 3=E/checkin, 4=F, 5=G/no)
-  var data = sheet.getRange(2, 2, lastRow - 1, 6).getValues();
+  // --- Phase 1: delete duplicates ---
+  if (lastRow >= 3) {
+    // Read cols B:G (indices: 0=B/apt, 1=C/name, 2=D/nat, 3=E/checkin, 4=F, 5=G/no)
+    var data = sheet.getRange(2, 2, lastRow - 1, 6).getValues();
 
-  // Build a map of signature → first row index
-  // Signature = APT + "|" + Guest1Name + "|" + CheckinDate
-  var seen = {};       // signature → { row: dataIndex, no: number }
-  var rowsToDelete = []; // sheet row numbers (1-based) to delete
+    var seen = {};
+    var rowsToDelete = [];
 
-  for (var i = 0; i < data.length; i++) {
-    var apt = String(data[i][0]).trim();
-    var name = String(data[i][1]).trim();
-    var checkin = String(data[i][3]).trim();
-    var no = Number(data[i][5]);
+    for (var i = 0; i < data.length; i++) {
+      var apt = String(data[i][0]).trim();
+      var name = String(data[i][1]).trim();
+      var checkin = String(data[i][3]).trim();
+      var no = Number(data[i][5]);
 
-    // Skip rows without a name (secondary guest rows or empty rows)
-    if (name === '') continue;
-    // Skip rows without an apartment (secondary guest rows)
-    if (apt === '') continue;
+      if (name === '') continue;
+      if (apt === '') continue;
 
-    var sig = apt + '|' + name + '|' + checkin;
+      var sig = apt + '|' + name + '|' + checkin;
 
-    if (seen[sig]) {
-      // Check if the "No" values are close (within 2) — confirms same submission batch
-      var firstNo = seen[sig].no;
-      if (!isNaN(no) && !isNaN(firstNo) && Math.abs(no - firstNo) <= 2) {
-        // This is a duplicate — mark the later row for deletion
-        var sheetRow = i + 2; // data index 0 = sheet row 2
-        rowsToDelete.push(sheetRow);
-        Logger.log('DUPLICATE FOUND row ' + sheetRow + ': ' + sig + ' (No ' + no + ' vs ' + firstNo + ')');
+      if (seen[sig]) {
+        var firstNo = seen[sig].no;
+        if (!isNaN(no) && !isNaN(firstNo) && Math.abs(no - firstNo) <= 2) {
+          var sheetRow = i + 2;
+          rowsToDelete.push(sheetRow);
+          Logger.log('DUPLICATE FOUND row ' + sheetRow + ': ' + sig + ' (No ' + no + ' vs ' + firstNo + ')');
 
-        // Also delete any secondary guest rows that follow this duplicate
-        for (var j = i + 1; j < data.length; j++) {
-          var nextApt = String(data[j][0]).trim();
-          var nextName = String(data[j][1]).trim();
-          if (nextApt !== '' || nextName === '') break; // reached next group or empty
-          rowsToDelete.push(j + 2);
+          for (var j = i + 1; j < data.length; j++) {
+            var nextApt = String(data[j][0]).trim();
+            var nextName = String(data[j][1]).trim();
+            if (nextApt !== '' || nextName === '') break;
+            rowsToDelete.push(j + 2);
+          }
         }
+      } else {
+        seen[sig] = { row: i, no: no };
       }
-    } else {
-      seen[sig] = { row: i, no: no };
+    }
+
+    rowsToDelete.sort(function(a, b) { return b - a; });
+    for (var k = 0; k < rowsToDelete.length; k++) {
+      sheet.deleteRow(rowsToDelete[k]);
+    }
+
+    if (rowsToDelete.length > 0) {
+      Logger.log('removeDuplicates: deleted ' + rowsToDelete.length + ' duplicate row(s)');
     }
   }
 
-  // Delete from bottom to top so row numbers stay valid
-  rowsToDelete.sort(function(a, b) { return b - a; });
-  for (var k = 0; k < rowsToDelete.length; k++) {
-    sheet.deleteRow(rowsToDelete[k]);
+  // --- Phase 2: send notifications for new (un-notified) submissions ---
+  notifyNewSubmissions(sheet);
+}
+
+/**
+ * Scans Sheet3 for primary guest rows that haven't been notified yet.
+ * Uses PropertiesService to track which submissions already triggered an email.
+ * Stored as JSON: [{sig:"apt|checkin|name", ts:epochMs}, ...]
+ * Entries older than 24 h are pruned on each run.
+ */
+function notifyNewSubmissions(sheet) {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty('notifiedSubmissions');
+  var notified = raw ? JSON.parse(raw) : [];
+
+  // Prune entries older than 24 hours
+  var now = Date.now();
+  var DAY_MS = 24 * 60 * 60 * 1000;
+  notified = notified.filter(function(entry) { return (now - entry.ts) < DAY_MS; });
+
+  // Build a set of already-notified signatures for fast lookup
+  var notifiedSet = {};
+  for (var n = 0; n < notified.length; n++) {
+    notifiedSet[notified[n].sig] = true;
   }
 
-  if (rowsToDelete.length > 0) {
-    Logger.log('removeDuplicates: deleted ' + rowsToDelete.length + ' duplicate row(s)');
+  // Re-read sheet after duplicate removal — cols B:E (apt, name, nationality, checkin)
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    props.setProperty('notifiedSubmissions', JSON.stringify(notified));
+    return;
   }
+  var numRows = lastRow - 1;
+  var data = sheet.getRange(2, 2, numRows, 4).getValues(); // B=0, C=1, D=2, E=3
+
+  // Walk through rows, identify primary rows and collect their guest groups
+  var i = 0;
+  while (i < numRows) {
+    var apt = String(data[i][0]).trim();
+    var guest1Name = String(data[i][1]).trim();
+    var checkin = String(data[i][3]).trim();
+
+    // Skip non-primary rows (no apartment or no name)
+    if (apt === '' || guest1Name === '') { i++; continue; }
+
+    var sig = apt + '|' + checkin + '|' + guest1Name;
+
+    if (notifiedSet[sig]) { i++; continue; } // already notified
+
+    // Collect all guests in this group (primary + secondary rows)
+    var guests = [{ name: guest1Name, nationality: String(data[i][2]).trim() }];
+    var j = i + 1;
+    while (j < numRows && String(data[j][0]).trim() === '' && String(data[j][1]).trim() !== '') {
+      guests.push({ name: String(data[j][1]).trim(), nationality: String(data[j][2]).trim() });
+      j++;
+    }
+
+    // Send notification and mark as notified
+    sendNotification(apt, checkin, guests);
+    notified.push({ sig: sig, ts: now });
+    notifiedSet[sig] = true;
+    Logger.log('NOTIFIED: ' + sig + ' (' + guests.length + ' guest(s))');
+
+    i = j;
+  }
+
+  props.setProperty('notifiedSubmissions', JSON.stringify(notified));
 }
 
 /**
