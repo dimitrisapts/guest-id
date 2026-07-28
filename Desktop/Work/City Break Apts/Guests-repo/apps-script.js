@@ -360,6 +360,25 @@ function getMaxNoFromSheet(sheet) {
   return max;
 }
 
+/**
+ * Shortens a URL via the TinyURL API.
+ */
+function shortenUrl(longUrl) {
+  var response = UrlFetchApp.fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
+  return response.getContentText();
+}
+
+/**
+ * Web App endpoint — accepts ?url=... and returns the shortened URL as plain text.
+ * Deploy as: Execute as Me, Who has access: Anyone.
+ */
+function doGet(e) {
+  var longUrl = e.parameter.url;
+  if (!longUrl) return ContentService.createTextOutput('missing url');
+  var short = shortenUrl(longUrl);
+  return ContentService.createTextOutput(short);
+}
+
 function sendNotification(apartment, checkin, guests) {
   var guestList = '';
   for (var i = 0; i < guests.length; i++) {
