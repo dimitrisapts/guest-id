@@ -362,10 +362,18 @@ function getMaxNoFromSheet(sheet) {
 
 /**
  * Shortens a URL via the TinyURL API.
+ * Falls back to the original URL if shortening fails.
  */
 function shortenUrl(longUrl) {
-  var response = UrlFetchApp.fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
-  return response.getContentText();
+  var response = UrlFetchApp.fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl), {
+    muteHttpExceptions: true
+  });
+  var code = response.getResponseCode();
+  if (code === 200) {
+    return response.getContentText().trim();
+  }
+  // fallback: return original URL if shortening fails
+  return longUrl;
 }
 
 /**
