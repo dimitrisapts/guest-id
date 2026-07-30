@@ -171,17 +171,17 @@ function removeDuplicates() {
  * Scans Sheet3 for primary guest rows that haven't been notified yet.
  * Uses PropertiesService to track which submissions already triggered an email.
  * Stored as JSON: [{sig:"apt|checkin|name", ts:epochMs}, ...]
- * Entries older than 24 h are pruned on each run.
+ * Entries older than 30 days are pruned on each run.
  */
 function notifyNewSubmissions(sheet) {
   var props = PropertiesService.getScriptProperties();
   var raw = props.getProperty('notifiedSubmissions');
   var notified = raw ? JSON.parse(raw) : [];
 
-  // Prune entries older than 24 hours
+  // Prune entries older than 30 days
   var now = Date.now();
-  var DAY_MS = 24 * 60 * 60 * 1000;
-  notified = notified.filter(function(entry) { return (now - entry.ts) < DAY_MS; });
+  var RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+  notified = notified.filter(function(entry) { return (now - entry.ts) < RETENTION_MS; });
 
   // Build a set of already-notified signatures for fast lookup
   var notifiedSet = {};
@@ -230,6 +230,37 @@ function notifyNewSubmissions(sheet) {
   }
 
   props.setProperty('notifiedSubmissions', JSON.stringify(notified));
+}
+
+/**
+ * One-time seed: marks all existing Sheet3 rows as already notified so they
+ * never trigger an email. Run this once manually from the Apps Script editor.
+ */
+function seedNotifiedStore() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) { Logger.log('Sheet not found'); return; }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { Logger.log('No data rows'); return; }
+
+  var numRows = lastRow - 1;
+  var data = sheet.getRange(2, 2, numRows, 4).getValues(); // B=0, C=1, D=2, E=3
+  var now = Date.now();
+  var notified = [];
+
+  for (var i = 0; i < numRows; i++) {
+    var apt = String(data[i][0]).trim();
+    var guest1Name = String(data[i][1]).trim();
+    var checkin = String(data[i][3]).trim();
+    if (apt === '' || guest1Name === '') continue;
+
+    var sig = apt + '|' + checkin + '|' + guest1Name;
+    notified.push({ sig: sig, ts: now });
+  }
+
+  PropertiesService.getScriptProperties().setProperty('notifiedSubmissions', JSON.stringify(notified));
+  Logger.log('seedNotifiedStore: seeded ' + notified.length + ' entries');
 }
 
 /**
