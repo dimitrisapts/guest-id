@@ -299,9 +299,10 @@ function findInsertionRow(sheet, checkinRaw) {
   var lastDataRow = getLastRowInColC(sheet);
   if (lastDataRow <= 1) return 1; // only header — insert after row 1
 
-  // Read cols B and E for all data rows (row 2 onward)
+  // Read cols B, C and E for all data rows (row 2 onward)
   var numRows = lastDataRow - 1;
   var colB = sheet.getRange(2, 2, numRows, 1).getValues(); // APT
+  var colC = sheet.getRange(2, 3, numRows, 1).getValues(); // Name
   var colE = sheet.getRange(2, 5, numRows, 1).getValues(); // Check-in
 
   var incomingDate = parseToDate(checkinRaw);
@@ -312,10 +313,10 @@ function findInsertionRow(sheet, checkinRaw) {
     if (cellDate && incomingDate && cellDate.getTime() <= incomingDate.getTime()) {
       // Found a row with an earlier or equal date.
       // Walk forward past any secondary guest rows in this group
-      // (secondary rows have empty col B).
+      // (secondary rows have empty col B BUT non-empty col C/name).
       var groupEnd = i;
       for (var j = i + 1; j < numRows; j++) {
-        if (String(colB[j][0]).trim() === '') {
+        if (String(colB[j][0]).trim() === '' && String(colC[j][0]).trim() !== '') {
           groupEnd = j;
         } else {
           break;
