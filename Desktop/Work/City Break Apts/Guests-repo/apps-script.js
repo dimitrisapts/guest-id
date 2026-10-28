@@ -168,55 +168,45 @@ function removeDuplicates() {
 }
 
 /**
+ * Returns the "Notified" sheet, creating it if it doesn't exist.
+ * The sheet has a single column A holding signature strings.
+ */
+function getNotifiedSheet() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var ns = ss.getSheetByName('Notified');
+  if (!ns) {
+    ns = ss.insertSheet('Notified');
+    // Hide the sheet — it's internal bookkeeping
+    ns.hideSheet();
+  }
+  return ns;
+}
+
+/**
  * Scans Sheet3 for primary guest rows that haven't been notified yet.
- * Uses PropertiesService to track which submissions already triggered an email.
- * Stored as JSON: [{sig:"apt|checkin|name", ts:epochMs}, ...]
- * Entries older than 365 days are pruned on each run.
+ * Uses the "Notified" sheet (col A = signature strings) as persistent storage.
  */
 function notifyNewSubmissions(sheet) {
-  var props = PropertiesService.getUserProperties();
-  var raw = props.getProperty('notifiedSubmissions');
-  var notified = raw ? JSON.parse(raw) : [];
+  var ns = getNotifiedSheet();
 
-  // Prune entries older than 365 days
-  var now = Date.now();
-  var RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
-  notified = notified.filter(function(entry) { return (now - entry.ts) < RETENTION_MS; });
-
-  // Safety check: if the store looks cleared (< 5 entries) but sheet has many
-  // data rows (> 10), auto re-seed to prevent a notification blast.
-  var lastRow = sheet.getLastRow();
-  var dataRowCount = lastRow > 1 ? lastRow - 1 : 0;
-  if (notified.length < 5 && dataRowCount > 10) {
-    Logger.log('SAFETY: store has ' + notified.length + ' entries but sheet has ' +
-      dataRowCount + ' data rows — auto re-seeding to prevent blast');
-    var seedData = sheet.getRange(2, 2, dataRowCount, 4).getValues();
-    notified = [];
-    for (var s = 0; s < dataRowCount; s++) {
-      var sApt = String(seedData[s][0]).trim();
-      var sName = String(seedData[s][1]).trim();
-      var sCheckin = String(seedData[s][3]).trim();
-      if (sApt === '' || sName === '') continue;
-      notified.push({ sig: sApt + '|' + sCheckin + '|' + sName, ts: now });
-    }
-    props.setProperty('notifiedSubmissions', JSON.stringify(notified));
-    Logger.log('SAFETY: re-seeded ' + notified.length + ' entries — skipping notifications this cycle');
-    return;
-  }
-
-  // Build a set of already-notified signatures for fast lookup
+  // Load all existing signatures into a lookup object
   var notifiedSet = {};
-  for (var n = 0; n < notified.length; n++) {
-    notifiedSet[notified[n].sig] = true;
+  var nsLastRow = ns.getLastRow();
+  if (nsLastRow >= 1) {
+    var existing = ns.getRange(1, 1, nsLastRow, 1).getValues();
+    for (var n = 0; n < existing.length; n++) {
+      var val = String(existing[n][0]).trim();
+      if (val !== '') notifiedSet[val] = true;
+    }
   }
 
-  // Re-read sheet after duplicate removal — cols B:E (apt, name, nationality, checkin)
-  if (lastRow < 2) {
-    props.setProperty('notifiedSubmissions', JSON.stringify(notified));
-    return;
-  }
+  // Read Sheet3 after duplicate removal — cols B:E (apt, name, nationality, checkin)
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
   var numRows = lastRow - 1;
   var data = sheet.getRange(2, 2, numRows, 4).getValues(); // B=0, C=1, D=2, E=3
+
+  var newSigs = [];
 
   // Walk through rows, identify primary rows and collect their guest groups
   var i = 0;
@@ -240,23 +230,27 @@ function notifyNewSubmissions(sheet) {
       j++;
     }
 
-    // Send notification and mark as notified
+    // Send notification and record signature
     sendNotification(apt, checkin, guests);
-    notified.push({ sig: sig, ts: now });
+    newSigs.push([sig]);
     notifiedSet[sig] = true;
     Logger.log('NOTIFIED: ' + sig + ' (' + guests.length + ' guest(s))');
 
     i = j;
   }
 
-  props.setProperty('notifiedSubmissions', JSON.stringify(notified));
+  // Append all new signatures to the Notified sheet in one batch
+  if (newSigs.length > 0) {
+    ns.getRange(nsLastRow + 1, 1, newSigs.length, 1).setValues(newSigs);
+  }
 }
 
 /**
- * One-time seed: marks all existing Sheet3 rows as already notified so they
- * never trigger an email. Run this once manually from the Apps Script editor.
+ * One-time migration: reads all current Sheet3 primary guest rows, builds
+ * their signatures, and writes them to the Notified sheet.
+ * Run this once manually from the Apps Script editor to seed existing data.
  */
-function seedNotifiedStore() {
+function migrateToNotifiedSheet() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) { Logger.log('Sheet not found'); return; }
@@ -266,9 +260,13 @@ function seedNotifiedStore() {
 
   var numRows = lastRow - 1;
   var data = sheet.getRange(2, 2, numRows, 4).getValues(); // B=0, C=1, D=2, E=3
-  var now = Date.now();
-  var notified = [];
 
+  var ns = getNotifiedSheet();
+  // Clear any existing data in the Notified sheet before seeding
+  if (ns.getLastRow() >= 1) ns.clear();
+
+  var sigs = [];
+  var seen = {};
   for (var i = 0; i < numRows; i++) {
     var apt = String(data[i][0]).trim();
     var guest1Name = String(data[i][1]).trim();
@@ -276,11 +274,17 @@ function seedNotifiedStore() {
     if (apt === '' || guest1Name === '') continue;
 
     var sig = apt + '|' + checkin + '|' + guest1Name;
-    notified.push({ sig: sig, ts: now });
+    if (seen[sig]) continue; // avoid duplicates in the seed
+    seen[sig] = true;
+    sigs.push([sig]);
   }
 
-  PropertiesService.getUserProperties().setProperty('notifiedSubmissions', JSON.stringify(notified));
-  Logger.log('seedNotifiedStore: seeded ' + notified.length + ' entries');
+  if (sigs.length > 0) {
+    ns.getRange(1, 1, sigs.length, 1).setValues(sigs);
+  }
+  // Hide the sheet
+  ns.hideSheet();
+  Logger.log('migrateToNotifiedSheet: seeded ' + sigs.length + ' entries');
 }
 
 /**
