@@ -171,17 +171,38 @@ function removeDuplicates() {
  * Scans Sheet3 for primary guest rows that haven't been notified yet.
  * Uses PropertiesService to track which submissions already triggered an email.
  * Stored as JSON: [{sig:"apt|checkin|name", ts:epochMs}, ...]
- * Entries older than 30 days are pruned on each run.
+ * Entries older than 365 days are pruned on each run.
  */
 function notifyNewSubmissions(sheet) {
-  var props = PropertiesService.getScriptProperties();
+  var props = PropertiesService.getUserProperties();
   var raw = props.getProperty('notifiedSubmissions');
   var notified = raw ? JSON.parse(raw) : [];
 
-  // Prune entries older than 30 days
+  // Prune entries older than 365 days
   var now = Date.now();
-  var RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+  var RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
   notified = notified.filter(function(entry) { return (now - entry.ts) < RETENTION_MS; });
+
+  // Safety check: if the store looks cleared (< 5 entries) but sheet has many
+  // data rows (> 10), auto re-seed to prevent a notification blast.
+  var lastRow = sheet.getLastRow();
+  var dataRowCount = lastRow > 1 ? lastRow - 1 : 0;
+  if (notified.length < 5 && dataRowCount > 10) {
+    Logger.log('SAFETY: store has ' + notified.length + ' entries but sheet has ' +
+      dataRowCount + ' data rows — auto re-seeding to prevent blast');
+    var seedData = sheet.getRange(2, 2, dataRowCount, 4).getValues();
+    notified = [];
+    for (var s = 0; s < dataRowCount; s++) {
+      var sApt = String(seedData[s][0]).trim();
+      var sName = String(seedData[s][1]).trim();
+      var sCheckin = String(seedData[s][3]).trim();
+      if (sApt === '' || sName === '') continue;
+      notified.push({ sig: sApt + '|' + sCheckin + '|' + sName, ts: now });
+    }
+    props.setProperty('notifiedSubmissions', JSON.stringify(notified));
+    Logger.log('SAFETY: re-seeded ' + notified.length + ' entries — skipping notifications this cycle');
+    return;
+  }
 
   // Build a set of already-notified signatures for fast lookup
   var notifiedSet = {};
@@ -190,7 +211,6 @@ function notifyNewSubmissions(sheet) {
   }
 
   // Re-read sheet after duplicate removal — cols B:E (apt, name, nationality, checkin)
-  var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     props.setProperty('notifiedSubmissions', JSON.stringify(notified));
     return;
@@ -259,7 +279,7 @@ function seedNotifiedStore() {
     notified.push({ sig: sig, ts: now });
   }
 
-  PropertiesService.getScriptProperties().setProperty('notifiedSubmissions', JSON.stringify(notified));
+  PropertiesService.getUserProperties().setProperty('notifiedSubmissions', JSON.stringify(notified));
   Logger.log('seedNotifiedStore: seeded ' + notified.length + ' entries');
 }
 
